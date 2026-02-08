@@ -11,146 +11,78 @@ variables:
   testResultsDirectory: '$(Build.SourcesDirectory)/TestResults'
   azureSubscription: 'Azure-Production'
   appName: 'WebResilentAPI-1'
-  stagingSlot: 'staging'
-  healthEndpoint: 'https://$(appName)-staging.azurewebsites.net/api/health'
 
 stages:
-
-
 - stage: Build
   displayName: 'Build and Test'
-
   jobs:
   - job: Build
-    displayName: 'Build Job'
-
+    displayName: 'Build job'
     steps:
 
     - task: UseDotNet@2
-      displayName: 'Install .NET SDK'
+      displayName: 'Install .NET SDK 8.x'
       inputs:
-        packageType: sdk
+        packageType: 'sdk'
         version: '8.0.x'
 
-    # Cache NuGet packages
-    - task: Cache@2
-      displayName: 'Cache NuGet Packages'
-      inputs:
-        key: 'nuget | "$(Agent.OS)" | */.csproj'
-        restoreKeys: |
-          nuget | "$(Agent.OS)"
-        path: $(HOME)/.nuget/packages
-
+    # Restore
     - script: dotnet restore $(solution)
-      displayName: 'Restore'
+      displayName: 'Restore NuGet packages'
 
+    # Build
     - script: dotnet build $(solution) --configuration $(buildConfiguration) --no-restore
-      displayName: 'Build'
+      displayName: 'Build solution'
 
-    # Parallel Tests
-    - script: >
-        dotnet test $(solution)
-        --configuration $(buildConfiguration)
-        --no-build
-        --collect:"XPlat Code Coverage"
-        --logger trx
-        --results-directory $(testResultsDirectory)
-        -m:4
-      displayName: 'Run Tests'
+    # Test
+    - script: dotnet test $(solution) --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory $(testResultsDirectory)
+      displayName: 'Run unit tests'
 
+    # Publish test results
     - task: PublishTestResults@2
-      displayName: 'Publish Tests'
+      displayName: 'Publish test results'
       condition: succeededOrFailed()
       inputs:
-        testResultsFormat: VSTest
+        testResultsFormat: 'VSTest'
         testResultsFiles: '$(testResultsDirectory)/*/.trx'
         failTaskOnFailedTests: true
 
+    # Publish code coverage
     - task: PublishCodeCoverageResults@2
-      displayName: 'Publish Coverage'
+      displayName: 'Publish code coverage'
       condition: succeededOrFailed()
       inputs:
         summaryFileLocation: '$(testResultsDirectory)/**/coverage.cobertura.xml'
-        codecoverageTool: Cobertura
+        codecoverageTool: 'Cobertura'
 
-    - script: >
-        dotnet publish ResilentAPI/ResilentAPI.csproj
-        --configuration $(buildConfiguration)
-        --output $(Build.ArtifactStagingDirectory)
-      displayName: 'Publish API'
+    # Publish API
+    - script: dotnet publish ResilentAPI/ResilentAPI.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
+      displayName: 'Publish API project'
 
+    # Upload artifacts
     - task: PublishBuildArtifacts@1
-      displayName: 'Publish Artifacts'
+      displayName: 'Publish build artifacts'
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        ArtifactName: drop
-        publishLocation: Container
-
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
 
 - stage: Deploy
-  displayName: 'Deploy Production'
+  displayName: 'Deploy to Azure'
   dependsOn: Build
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-
   jobs:
   - deployment: Deploy
-    environment: production
+    displayName: 'Deploy to App Service'
+    environment: 'production'
     strategy:
       runOnce:
         deploy:
           steps:
-
-          - download: current
-            artifact: drop
-
-          # Deploy to staging slot first
           - task: AzureWebApp@1
-            displayName: 'Deploy to Staging Slot'
+            displayName: 'Deploy Azure Web App'
             inputs:
               azureSubscription: '$(azureSubscription)'
-              appType: webAppLinux
+              appType: 'webAppLinux'
               appName: '$(appName)'
-              deployToSlotOrASE: true
-              resourceGroupName: '$(appName)'
-              slotName: '$(stagingSlot)'
               package: '$(Pipeline.Workspace)/drop'
-
-          # Wait for app warmup
-          - powershell: Start-Sleep -Seconds 25
-            displayName: 'Wait for App Warmup'
-
-          # Health check validation
-          - powershell: |
-              $maxRetries = 10
-              $retry = 0
-              $success = $false
-
-              while ($retry -lt $maxRetries -and -not $success) {
-                try {
-                  $response = Invoke-RestMethod -Uri "$(healthEndpoint)" -TimeoutSec 10
-                  if ($response.status -eq "healthy") {
-                    Write-Host "Health check passed"
-                    $success = $true
-                  }
-                } catch {
-                  Write-Host "Health check failed, retrying..."
-                }
-                Start-Sleep -Seconds 10
-                $retry++
-              }
-
-              if (-not $success) {
-                Write-Error "Health check failed after retries"
-                exit 1
-              }
-            displayName: 'Health Check Validation'
-
-          # Swap staging -> production
-          - task: AzureAppServiceManage@0
-            displayName: 'Swap Slots'
-            inputs:
-              azureSubscription: '$(azureSubscription)'
-              Action: 'Swap Slots'
-              WebAppName: '$(appName)'
-              ResourceGroupName: '$(appName)'
-              SourceSlot: '$(stagingSlot)'
