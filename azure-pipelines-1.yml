@@ -71,7 +71,7 @@ stages:
                 - task: AzureWebApp@1
                   displayName: 'Deploy to Azure App Service'
                   inputs:
-                    azureSubscription: 'Azure subscription 1'
+                    azureSubscription: 'WebResilentConnection'
                     appType: 'webApp'
                     appName: 'WebResilentAPI'
                     package: '$(Pipeline.Workspace)/drop/**/*.zip'
