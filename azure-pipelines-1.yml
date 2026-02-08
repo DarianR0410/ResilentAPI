@@ -1,12 +1,15 @@
 trigger:
-  - Master
-  - dev
+  branches:
+    include:
+      - Master
+      - dev
 
 pool:
   name: SelfHostedPool
 
 variables:
-  buildConfiguration: 'Release'
+  - name: buildConfiguration
+    value: 'Release'
 
 stages:
   - stage: Build
@@ -38,15 +41,16 @@ stages:
             displayName: 'Run unit tests'
             inputs:
               command: 'test'
-              projects: '**/*Tests.csproj'
+              projects: '**/*Test.csproj' 
               arguments: '--configuration $(buildConfiguration) --no-build --logger trx'
 
           - task: DotNetCoreCLI@2
             displayName: 'Publish API'
             inputs:
               command: 'publish'
-              publishWebProjects: true
-              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+              publishWebProjects: false 
+              projects: '**/ResilientAPI.csproj' 
+              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory) --no-build'
               zipAfterPublish: true
 
           - task: PublishBuildArtifacts@1
@@ -58,12 +62,14 @@ stages:
 
   - stage: Deploy
     displayName: 'Deploy to Azure App Service'
-    dependsOn: Build
+    dependsOn:
+      - Build
     condition: succeeded()
     jobs:
       - deployment: DeployToAzure
         displayName: 'Deploy API'
-        environment: 'production'
+        environment:
+          name: 'production'
         strategy:
           runOnce:
             deploy:
