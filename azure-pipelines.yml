@@ -1,5 +1,5 @@
 trigger:
-- Master
+- master
 - dev
 
 pool:
@@ -11,30 +11,25 @@ variables:
 
 steps:
 
-
 - task: UseDotNet@2
   displayName: 'Install .NET SDK 8.x'
   inputs:
     packageType: 'sdk'
     version: '8.0.x'
 
-
+# Restore
 - script: dotnet restore $(solution)
   displayName: 'Restore NuGet packages'
 
-
+# Build
 - script: dotnet build $(solution) --configuration $(buildConfiguration) --no-restore
   displayName: 'Build solution'
 
-
-- script: dotnet test $(solution) \
-    --configuration $(buildConfiguration) \
-    --no-build \
-    --collect:"XPlat Code Coverage" \
-    --logger trx
+# Test
+- script: dotnet test $(solution) --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx
   displayName: 'Run unit tests'
 
-
+# Publish test results
 - task: PublishTestResults@2
   displayName: 'Publish test results'
   inputs:
@@ -42,11 +37,11 @@ steps:
     testResultsFiles: '*/.trx'
     failTaskOnFailedTests: true
 
-- script: dotnet publish ResilentAPI/ResilentAPI.csproj \
-    --configuration $(buildConfiguration) \
-    --output $(Build.ArtifactStagingDirectory)
+# Publish API
+- script: dotnet publish ResilentAPI/ResilentAPI.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
   displayName: 'Publish API project'
 
+# Upload artifacts
 - task: PublishBuildArtifacts@1
   displayName: 'Publish build artifacts'
   inputs:
