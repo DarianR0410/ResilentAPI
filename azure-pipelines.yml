@@ -26,16 +26,25 @@ steps:
   displayName: 'Build solution'
 
 # Test
-- script: dotnet test $(solution) --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx
+- script: dotnet test $(solution) --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory $(Agent.TempDirectory)/TestResults
   displayName: 'Run unit tests'
 
 # Publish test results
 - task: PublishTestResults@2
   displayName: 'Publish test results'
+  condition: succeededOrFailed()
   inputs:
     testResultsFormat: 'VSTest'
-    testResultsFiles: '*/.trx'
+    testResultsFiles: '*/TestResults/.trx'
     failTaskOnFailedTests: true
+
+# Publish code coverage
+- task: PublishCodeCoverageResults@2
+  displayName: 'Publish code coverage'
+  condition: succeededOrFailed()
+  inputs:
+    summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+    codecoverageTool: 'Cobertura'
 
 # Publish API
 - script: dotnet publish ResilentAPI/ResilentAPI.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
