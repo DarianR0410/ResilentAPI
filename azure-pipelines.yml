@@ -34,11 +34,17 @@ stages:
     - script: dotnet build $(solution) --configuration $(buildConfiguration) --no-restore
       displayName: 'Build solution'
 
-    # Test
-    - script: dotnet test $(solution) --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory $(testResultsDirectory)
-      displayName: 'Run unit tests'
+    
+    - script: >
+        dotnet test $(solution)
+        --configuration $(buildConfiguration)
+        --no-build
+        --collect:"XPlat Code Coverage"
+        --logger "trx;LogFileName=unit-tests-results.trx"
+        --results-directory $(testResultsDirectory)
+      displayName: 'Run unit tests and collect coverage'
 
-    # Publish test results
+    # Publish test results (works even if tests fail)
     - task: PublishTestResults@2
       displayName: 'Publish test results'
       condition: succeededOrFailed()
@@ -46,20 +52,22 @@ stages:
         testResultsFormat: 'VSTest'
         testResultsFiles: '$(testResultsDirectory)/*/.trx'
         failTaskOnFailedTests: true
+        publishRunAttachments: true
 
-    # Publish code coverage
+    # Publish code coverage results
     - task: PublishCodeCoverageResults@2
       displayName: 'Publish code coverage'
       condition: succeededOrFailed()
       inputs:
         summaryFileLocation: '$(testResultsDirectory)/**/coverage.cobertura.xml'
         codecoverageTool: 'Cobertura'
+        reportDirectory: '$(testResultsDirectory)/**/Coverage'
 
-    # Publish API
-    - script: dotnet publish ResilentAPI/ResilentAPI.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
+    # Publish the application (only the web project)
+    - script: dotnet publish ResilentAPI/ResilentAPI.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish
       displayName: 'Publish API project'
 
-    # Upload artifacts
+    # Upload artifacts for deployment stage
     - task: PublishBuildArtifacts@1
       displayName: 'Publish build artifacts'
       inputs:
@@ -70,6 +78,7 @@ stages:
 - stage: Deploy
   displayName: 'Deploy to Azure'
   dependsOn: Build
+  # Only deploy on master branch (and if build succeeded)
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: Deploy
@@ -80,9 +89,9 @@ stages:
         deploy:
           steps:
           - task: AzureWebApp@1
-            displayName: 'Deploy Azure Web App'
+            displayName: 'Deploy to Azure Web App'
             inputs:
               azureSubscription: '$(azureSubscription)'
               appType: 'webAppLinux'
               appName: '$(appName)'
-              package: '$(Pipeline.Workspace)/drop'
+              package: '$(Pipeline.Workspace)/drop/publish/*.zip'   
