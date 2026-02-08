@@ -10,7 +10,7 @@ variables:
   solution: 'ResilentAPI.sln'
   testResultsDirectory: '$(Build.SourcesDirectory)/TestResults'
   azureSubscription: 'Azure-Production'
-  appName: 'WebResilientAPI-1'
+  appName: 'WebResilentAPI-1'
 
 stages:
 - stage: Build
