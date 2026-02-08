@@ -8,6 +8,7 @@ pool:
 variables:
   buildConfiguration: 'Release'
   solution: 'ResilentAPI.sln'
+  testResultsDirectory: '$(Build.SourcesDirectory)/TestResults'
 
 steps:
 
@@ -26,7 +27,7 @@ steps:
   displayName: 'Build solution'
 
 # Test
-- script: dotnet test $(solution) --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory $(Agent.TempDirectory)/TestResults
+- script: dotnet test $(solution) --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory $(testResultsDirectory)
   displayName: 'Run unit tests'
 
 # Publish test results
@@ -35,7 +36,7 @@ steps:
   condition: succeededOrFailed()
   inputs:
     testResultsFormat: 'VSTest'
-    testResultsFiles: '*/TestResults/.trx'
+    testResultsFiles: '$(testResultsDirectory)/*/.trx'
     failTaskOnFailedTests: true
 
 # Publish code coverage
@@ -43,7 +44,7 @@ steps:
   displayName: 'Publish code coverage'
   condition: succeededOrFailed()
   inputs:
-    summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+    summaryFileLocation: '$(testResultsDirectory)/**/coverage.cobertura.xml'
     codecoverageTool: 'Cobertura'
 
 # Publish API
