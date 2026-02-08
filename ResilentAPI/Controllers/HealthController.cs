@@ -29,7 +29,7 @@ public class HealthController : ControllerBase
 	/// An IActionResult containing the health status, version, and environment of the application in the response body.
 	/// </return>
 	[HttpGet]
-	[Route("/health")]
+	[Route("/api/health")]
 	public IActionResult Health()
 	{
 		return Ok(new
@@ -49,7 +49,7 @@ public class HealthController : ControllerBase
 	/// An IActionResult confirming the logging operation was successful with a success response.
 	/// </return>
 	[HttpPost]
-	[Route("/health/log")]
+	[Route("/api/log")]
 	public IActionResult Log([FromBody] LogRequest logRequest)
 	{
 		_logger.LogInformation(logRequest.Message);
@@ -63,7 +63,7 @@ public class HealthController : ControllerBase
 	/// An IActionResult representing a 500 Internal Server Error with error details.
 	/// </return>
 	[HttpGet]
-	[Route("/health/error")]
+	[Route("/api/error")]
 	public IActionResult HealthError()
 	{
 		_logger.LogError("error test called");

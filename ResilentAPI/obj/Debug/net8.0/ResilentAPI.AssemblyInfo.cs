@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ResilentAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c246bdfbbc68ea62ed57501c131ead12e0a778ce")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+74d1437810f1cee9a5e099bf9d95c91d5b48ccaa")]
 [assembly: System.Reflection.AssemblyProductAttribute("ResilentAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ResilentAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
