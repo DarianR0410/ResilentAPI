@@ -1,6 +1,6 @@
 trigger:
-- main
-- develop
+- Master
+- dev
 
 pool:
   vmImage: 'SelfHostedPool'
